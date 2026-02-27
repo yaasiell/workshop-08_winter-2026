@@ -230,12 +230,12 @@ ggplot(data = drought_exp_clean,
               width = 0.2) +
   scale_color_manual(values = c(
     "Lotus scoparius" = lotsco_col,
-    "enstameon centrathifolius" = pencen_col,
-    "salvia leucophylla" = salleu_col,
-    "encelia californica" = enccal_col,
-    "sripe pulchra" = stipul_col,
-    "eschsechalzia californica" = esccal_col,
-    "grindelia camporum" = gricam_col
+    "Penstemon centranthifolius" = pencen_col,
+    "Salvia leucophylla" = salleu_col,
+    "Encelia californica" = enccal_col,
+    "Stipa pulchra" = stipul_col,
+    "Eschscholzia californica" = esccal_col,
+    "Grindelia camporum" = gricam_col
   )) +
   scale_x_discrete(labels = label_wrap(10)) +
   labs(x = "Species Name",
@@ -270,28 +270,51 @@ ggplot(data = drought_exp_clean,
 #| label: model fitting
 
 # model 0: null model
-
+model0 <- lm(
+  total_g ~ 1, # no predictors in this model
+  data = drought_exp_clean
+)
 
 # model 1: all predictors
-
+model1 <- lm(
+  total_g ~ sla + water_treatment + species_name,
+  data = drought_exp_clean
+)
 
 # model 2: SLA and water treatment
-
-
+model2 <- lm(
+  total_g ~ sla + water_treatment,
+  data = drought_exp_clean
+)
 # model 3: SLA and species
 
-
+model3 <- lm(
+  total_g ~ sla + species_name,
+  data = drought_exp_clean
+)
 # model 4: water treatment and species
 
-
+model4 <- lm(
+  total_g ~ water_treatment + species_name,
+  data = drought_exp_clean
+)
 # model 5: SLA
-
+model5 <- lm(
+  total_g ~ sla,
+  data = drought_exp_clean
+)
 
 # model 6: water treatment
-
+model6 <- lm(
+  total_g ~ water_treatment,
+  data = drought_exp_clean
+)
 
 # model 7: species
-
+model7 <- lm(
+  total_g ~ species_name,
+  data = drought_exp_clean
+)
 ```
 
 ## Model selection
@@ -300,57 +323,88 @@ Insert code to use the `AICc()` function to calculate the AIC for each model.
 
 Arrange by decreasing AIC.
 
+```{r}
+#| label: model selection
 
+AICc(
+  model0,
+  model1,
+  model2,
+  model3,
+  model4,
+  model5,
+  model6,
+  model7
+) |> 
+  arrange(AICc)
+```
 
+The best model to describe variation in plant mass only includes water treatment and species. 
 
 ## Model diagnostics
 
 Insert code to look at the diagnostic plots for the best model.
 
 
+```{r}
+#| label: checking diagnostics
 
+par(mfrow = c(2,2)) # display plots in a 2x2 grid
+plot(model4) #model to check diagnostics
 
+```
+Diagnostics plot look good 
+Residuals (standing in for errors) 
+No outliers influencing model estimates of coefficients.
 
 ## Summary
 
 Insert code to display the summary for the best model. 
+```{r}
+#| label: looking at model summary
+
+summary(model4)
+```
 
 
 
 **What are the reference levels?**  
 
-
+Drought stressed and Lotus scoparius. 
 
 **What does the `(Intercept)` represent?**  
 
-
+The intercept is the model prediction for plant mass for Lotus scoparius in the drought stressed treatment.The model predicts that lotus scoparius mass in the drought stressed treatment will be 0.055 $\pm$ 0.025 (SE) g. 
 
 **What does `water_treatmentWell watered` represent?**
 
-
+This is the model prediction for the difference for Lotus scoparius mass between the well watered and the drought stressed treatments. The model predicts that this difference is 0.12 $\pm$ 0.017 g. 
 
 **What does `species_namePenstemon centranthifolius` represent?**  
+This is the model prediction for the difference between Penstemon centranthifolius mass in the well watered treatment and Lotus scoparius mass in the well watered treatment. The model predicts that this differnce is 0.05 $\pm$ 0.03 g. 
 
 
 
 **What does `species_nameEschscholzia californica` represent?**
 
-
+This is the model prediction for the diffrence between Eschscholzia californica mass in the well watered treatment and Lotus scoparius mass in the well watered treatment. The model predicts that this difference is 0.23 $\pm$ 0.03g. 
 
 
 ## Stop and think: what does this model mean?  
 
 **What is the best model?**
 
-[insert your response here]
+The best model includes water treatment and species as predictors
 
 **How much variation in the response (total mass, in grams) does this model explain?**
 
-[insert your response here]
+72% of the cariation in plant mass can be explained by this model.
 
 **How do we interpret the effects of the predictors on the response variable (again, total mass in grams)?**
 
-[insert your response here]
+Treatment influences plant mass.
+
+Species influences plant mass. 
 
 # 4. Model predictions
 
@@ -360,11 +414,52 @@ Rename the `x` column and `group` column to match the original data frame (`drou
 
 Look at the object before plotting.
 
+```{r}
+#| label: genrate predictions
+
+preds <- ggpredict(
+  model4,
+  terms = c("water_treatment","species_name")
+) |>
+  rename(water_treatment = x,
+         species_name = group)
+```
 
 
 # 5. Final figure
 
 Create a clean, publication ready figure depicting predictions for the best model and the underlying data.
+```{r}
+ggplot(data = drought_exp_clean,
+       aes(x = species_name,
+           y = total_g,
+           color = water_treatment)) +
+  geom_jitter(height = 0,
+              width = 0.2,
+              alpha = 0.5) +
+  geom_pointrange(data = preds,
+                  aes(x = water_treatment,
+                      y = predicted,
+                      ymin = conf.low,
+                      ymax = conf.high)) +
+
+  scale_color_manual(values = c(
+    "Lotus scoparius" = lotsco_col,
+    "Penstemon centranthifolius" = pencen_col,
+    "Salvia leucophylla" = salleu_col,
+    "Encelia californica" = enccal_col,
+    "Stipa pulchra" = stipul_col,
+    "Eschscholzia californica" = esccal_col,
+    "Grindelia camporum" = gricam_col
+  )) +
+  scale_x_discrete(labels = label_wrap(10)) +
+  labs(x = "Species Name",
+       y = "Total mass(g)",
+       title = "Plant mass differs across species") +
+  theme(legend.position ="none") +
+  facet_wrap(~ species_name,
+             nrow = 1)
+```
 
 
 # 6. Writing
